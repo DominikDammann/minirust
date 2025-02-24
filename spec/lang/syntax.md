@@ -360,6 +360,9 @@ pub enum Terminator {
         /// The block to jump to when this call returns.
         /// If `None`, UB will be raised when the function returns.
         next_block: Option<BbName>,
+        /// The block to jump to when this call unwinds.
+        /// If `None`, UB will be raised when the function unwinds.
+        unwind_block: Option<BbName>
     },
     /// Return from the current function.
     Return,
