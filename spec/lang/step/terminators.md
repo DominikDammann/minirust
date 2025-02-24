@@ -230,7 +230,7 @@ impl<M: Memory> Machine<M> {
 
     fn eval_terminator(
         &mut self,
-        Terminator::Call { callee, calling_convention: caller_conv, arguments, ret: ret_expr, next_block }: Terminator
+        Terminator::Call { callee, calling_convention: caller_conv, arguments, ret: ret_expr, next_block, unwind_block }: Terminator
     ) -> NdResult {
         // First evaluate the return place and remember it for `Return`. (Left-to-right!)
         let (caller_ret_place, caller_ret_ty) = self.eval_place(ret_expr)?;
