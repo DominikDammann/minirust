@@ -741,6 +741,10 @@ impl Terminator {
                 }
             }
             Return => {}
+            StartUnwind(block_name) => {
+                ensure_wf(func.blocks.contains_key(block_name), "Terminator::StartUnwind: unwind block does not exist")?;
+            }
+            ResumeUnwind=>{}
         }
 
         ret(())

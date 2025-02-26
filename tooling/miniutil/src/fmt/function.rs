@@ -209,6 +209,13 @@ fn fmt_terminator(t: Terminator, comptypes: &mut Vec<CompType>) -> String {
         Terminator::Return => {
             format!("    return;")
         }
+        Terminator::StartUnwind(block_name) => {
+            let bb_name = fmt_bb_name(block_name);
+            format!("    start unwind -> unwind: {bb_name} ")
+        }
+        Terminator::ResumeUnwind => {
+            format!("    resume")
+        }
         Terminator::Intrinsic { intrinsic, arguments, ret, next_block } => {
             let callee = match intrinsic {
                 IntrinsicOp::Assume => "assume",
@@ -234,7 +241,7 @@ fn fmt_terminator(t: Terminator, comptypes: &mut Vec<CompType>) -> String {
             let args: Vec<_> =
                 arguments.iter().map(|arg| fmt_value_expr(arg, comptypes).to_string()).collect();
             fmt_call(callee, CallingConvention::Rust, args.join(", "), ret, next_block, None,comptypes)
-        }
+        }  
     }
 }
 
