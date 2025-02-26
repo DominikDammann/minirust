@@ -366,6 +366,10 @@ pub enum Terminator {
     },
     /// Return from the current function.
     Return,
+    /// Starts unwinding, jump to the first clean-up block.
+    StartUnwind(BbName),
+    /// Ends this function invocation. The unwinding should continue at the caller's stack frame.
+    ResumeUnwind,
 }
 
 /// Function arguments can be passed by-value or in-place.
