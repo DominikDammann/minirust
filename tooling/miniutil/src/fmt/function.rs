@@ -68,8 +68,9 @@ fn fmt_function(
 
 fn fmt_bb(bb_name: BbName, bb: BasicBlock, start: bool, comptypes: &mut Vec<CompType>) -> String {
     let name = bb_name.0.get_internal();
+    let blocktype: String = fmt_bb_type(bb); 
 
-    let mut out = if start { format!("  start bb{name}:\n") } else { format!("  bb{name}:\n") };
+    let mut out = if start { format!("  start bb{name}{blocktype}:\n") } else { format!("  bb{name}{blocktype}:\n") };
 
     // Format statements
     for st in bb.statements.iter() {
@@ -257,6 +258,14 @@ fn fmt_fetch(binop: IntBinOp) -> &'static str {
 fn fmt_bb_name(bb: BbName) -> String {
     let id = bb.0.get_internal();
     format!("bb{id}")
+}
+
+fn fmt_bb_type(bb: BasicBlock) -> String{
+    match bb.blocktype {
+        BbType::Regular => "".to_string(),
+        BbType::Cleanup => " (Cleanup)".to_string(),
+        BbType::Terminate => " (Terminate)".to_string(),
+    }
 }
 
 pub(super) fn fmt_fn_name(fn_name: FnName) -> String {

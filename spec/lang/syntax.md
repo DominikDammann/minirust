@@ -479,6 +479,14 @@ pub struct Function {
 pub struct BasicBlock {
     pub statements: List<Statement>,
     pub terminator: Terminator,
+    pub blocktype: BbType,
+}
+
+/// The type of a basic block in the CFG
+pub enum BbType {
+    Regular,
+    Cleanup,
+    Terminate,
 }
 
 /// A global allocation.

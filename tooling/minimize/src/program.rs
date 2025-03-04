@@ -132,6 +132,7 @@ fn mk_start_fn(entry: u32) -> Function {
             next_block: Some(b1_name),
             unwind_block: None,
         },
+        blocktype: BbType::Regular,
     };
 
     let b1 = BasicBlock {
@@ -142,6 +143,7 @@ fn mk_start_fn(entry: u32) -> Function {
             ret: build::unit_place(),
             next_block: None,
         },
+        blocktype: BbType::Regular,
     };
 
     let mut blocks = Map::new();

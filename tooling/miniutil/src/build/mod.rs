@@ -168,7 +168,7 @@ impl FunctionBuilder {
         let start_block = fb.declare_block();
         // Make sure we set `start` correctly above.
         assert_eq!(start_block, fb.start);
-        fb.set_cur_block(start_block);
+        fb.set_cur_block(start_block, BbType::Regular);
         fb
     }
 
@@ -178,12 +178,12 @@ impl FunctionBuilder {
         name
     }
 
-    fn set_cur_block(&mut self, name: BbName) {
+    fn set_cur_block(&mut self, name: BbName, blocktype: BbType) {
         if self.blocks.contains_key(name) {
             panic!("Already inserted a block with this name.")
         }
         self.cur_block = match self.cur_block {
-            None => Some(CurBlock::new(name)),
+            None => Some(CurBlock::new(name, blocktype)),
             Some(_) =>
                 panic!("There is an unfinished current block. Cannot set a new current block."),
         };
@@ -261,6 +261,48 @@ impl FunctionBuilder {
         self.args.push(name);
         local_by_name(name)
     }
+
+    pub fn cleanup<F>(&mut self, cleanup_builder: F) -> BbName
+    where 
+        F : Fn(&mut Self),
+        {
+            let mut cur_block = self.cur_block.take();
+            let cleanup_block = self.declare_block();
+            self.set_cur_block(cleanup_block, BbType::Cleanup);
+            cleanup_builder(self);
+            if self.cur_block.is_some() {
+                self.resume_unwind();
+            }
+            self.cur_block = cur_block.take();
+            cleanup_block
+        }
+    
+    pub fn cleanup_resume(&mut self) -> BbName
+    {
+        self.cleanup(|_|{})
+    }
+
+    pub fn cleanup_exit(&mut self) -> BbName
+    {
+        self.cleanup(|f|{
+            f.exit();
+        })
+    }
+    
+    pub fn terminate<F>(& mut self, terminat_builer: F) -> BbName
+    where 
+        F : Fn(&mut Self),
+    {
+        let mut cur_block = self.cur_block.take();
+        let terminate_block = self.declare_block();
+        self.set_cur_block(terminate_block, BbType::Terminate);
+        terminat_builer(self);
+        if self.cur_block.is_some() {
+            self.unreachable();
+        }
+        self.cur_block = cur_block.take();
+        terminate_block
+    }
 }
 
 pub struct VTableBuilder {
@@ -327,15 +369,16 @@ impl TraitBuilder {
 struct CurBlock {
     statements: List<Statement>,
     name: BbName,
+    blocktype: BbType,
 }
 
 impl CurBlock {
-    pub fn new(name: BbName) -> CurBlock {
-        CurBlock { statements: Default::default(), name }
+    pub fn new(name: BbName, blocktype: BbType) -> CurBlock {
+        CurBlock { statements: Default::default(), name , blocktype}
     }
 }
 
-fn bbname_into_u32(name: BbName) -> u32 {
+pub fn bbname_into_u32(name: BbName) -> u32 {
     let BbName(name) = name;
     name.get_internal()
 }
@@ -389,7 +432,7 @@ pub fn program(fns: &[Function]) -> Program {
 
 // Generates a small program with a single basic block.
 pub fn small_program(locals: &[Type], statements: &[Statement]) -> Program {
-    let b = block(statements, exit());
+    let b = block(statements, exit(), BbType::Regular);
     let f = function(Ret::No, 0, locals, &[b]);
 
     program(&[f])
