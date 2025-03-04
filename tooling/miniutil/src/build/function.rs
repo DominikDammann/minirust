@@ -85,8 +85,8 @@ pub fn function(ret: Ret, num_args: usize, locals: &[Type], bbs: &[BasicBlock]) 
     }
 }
 
-pub fn block(statements: &[Statement], terminator: Terminator) -> BasicBlock {
-    BasicBlock { statements: statements.iter().copied().collect(), terminator }
+pub fn block(statements: &[Statement], terminator: Terminator, blocktype: BbType) -> BasicBlock {
+    BasicBlock { statements: statements.iter().copied().collect(), terminator, blocktype }
 }
 
 // block!(statement1, statement2, ..., terminator)
@@ -109,7 +109,7 @@ pub macro block {
         block!(@{} $($rest),*)
     },
     (@{$($stmts:expr),*} $terminator:expr) => {
-        block(&[$($stmts),*], $terminator)
+        block(&[$($stmts),*], $terminator, BbType::Regular)
     },
 
     // This is just a specialization of the case below.
