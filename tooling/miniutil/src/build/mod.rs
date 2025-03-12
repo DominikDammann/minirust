@@ -168,7 +168,7 @@ impl FunctionBuilder {
         let start_block = fb.declare_block();
         // Make sure we set `start` correctly above.
         assert_eq!(start_block, fb.start);
-        fb.set_cur_block(start_block, BbType::Regular);
+        fb.set_cur_block(start_block, BbKind::Regular);
         fb
     }
 
@@ -178,12 +178,12 @@ impl FunctionBuilder {
         name
     }
 
-    fn set_cur_block(&mut self, name: BbName, blocktype: BbType) {
+    fn set_cur_block(&mut self, name: BbName, kind: BbKind) {
         if self.blocks.contains_key(name) {
             panic!("Already inserted a block with this name.")
         }
         self.cur_block = match self.cur_block {
-            None => Some(CurBlock::new(name, blocktype)),
+            None => Some(CurBlock::new(name, kind)),
             Some(_) =>
                 panic!("There is an unfinished current block. Cannot set a new current block."),
         };
@@ -268,10 +268,13 @@ impl FunctionBuilder {
         {
             let mut cur_block = self.cur_block.take();
             let cleanup_block = self.declare_block();
-            self.set_cur_block(cleanup_block, BbType::Cleanup);
+            self.set_cur_block(cleanup_block, BbKind::Cleanup);
             cleanup_builder(self);
+
             if self.cur_block.is_some() {
-                self.resume_unwind();
+                panic!(
+                    "The cleanup block is unfinished. The block needs to end with a Terminator."
+                );
             }
             self.cur_block = cur_block.take();
             cleanup_block
@@ -279,7 +282,9 @@ impl FunctionBuilder {
     
     pub fn cleanup_resume(&mut self) -> BbName
     {
-        self.cleanup(|_|{})
+        self.cleanup(|f|{
+            f.resume_unwind();
+        })
     }
 
     pub fn cleanup_exit(&mut self) -> BbName
@@ -295,10 +300,13 @@ impl FunctionBuilder {
     {
         let mut cur_block = self.cur_block.take();
         let terminate_block = self.declare_block();
-        self.set_cur_block(terminate_block, BbType::Terminate);
+        self.set_cur_block(terminate_block, BbKind::Terminate);
         terminat_builer(self);
+        // Add Unreachable if no terminator is specified.
         if self.cur_block.is_some() {
-            self.unreachable();
+            panic!(
+                "The terminate block is unfinished. The block needs to end with a Terminator."
+            );
         }
         self.cur_block = cur_block.take();
         terminate_block
@@ -369,16 +377,16 @@ impl TraitBuilder {
 struct CurBlock {
     statements: List<Statement>,
     name: BbName,
-    blocktype: BbType,
+    kind: BbKind,
 }
 
 impl CurBlock {
-    pub fn new(name: BbName, blocktype: BbType) -> CurBlock {
-        CurBlock { statements: Default::default(), name , blocktype}
+    pub fn new(name: BbName, kind: BbKind) -> CurBlock {
+        CurBlock { statements: Default::default(), name , kind}
     }
 }
 
-pub fn bbname_into_u32(name: BbName) -> u32 {
+fn bbname_into_u32(name: BbName) -> u32 {
     let BbName(name) = name;
     name.get_internal()
 }
@@ -432,7 +440,7 @@ pub fn program(fns: &[Function]) -> Program {
 
 // Generates a small program with a single basic block.
 pub fn small_program(locals: &[Type], statements: &[Statement]) -> Program {
-    let b = block(statements, exit(), BbType::Regular);
+    let b = block(statements, exit(), BbKind::Regular);
     let f = function(Ret::No, 0, locals, &[b]);
 
     program(&[f])

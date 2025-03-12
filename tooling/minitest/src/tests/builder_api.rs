@@ -80,7 +80,7 @@ fn switch_int() {
     f.storage_dead(var);
     f.exit();
     let f = p.finish_function(f);
-    
+
     let p = p.finish_program(f);
     assert_stop::<BasicMem>(p);
 }
@@ -173,7 +173,7 @@ fn no_exit() {
 }
 
 #[test]
-fn reach_terminate_block(){
+fn reach_terminate_block() {
     let mut p = ProgramBuilder::new();
 
     let panic_fn = {
@@ -200,5 +200,4 @@ fn reach_terminate_block(){
     let p = p.finish_program(main_fn);
     dump_program(p);
     assert_stop::<BasicMem>(p);
-
 }
