@@ -68,9 +68,9 @@ fn fmt_function(
 
 fn fmt_bb(bb_name: BbName, bb: BasicBlock, start: bool, comptypes: &mut Vec<CompType>) -> String {
     let name = bb_name.0.get_internal();
-    let blocktype: String = fmt_bb_type(bb); 
+    let block_kind: String = fmt_bb_kind(bb); 
 
-    let mut out = if start { format!("  start bb{name}{blocktype}:\n") } else { format!("  bb{name}{blocktype}:\n") };
+    let mut out = if start { format!("  start bb{name}{block_kind}:\n") } else { format!("  bb{name}{block_kind}:\n") };
 
     // Format statements
     for st in bb.statements.iter() {
@@ -260,11 +260,11 @@ fn fmt_bb_name(bb: BbName) -> String {
     format!("bb{id}")
 }
 
-fn fmt_bb_type(bb: BasicBlock) -> String{
-    match bb.blocktype {
-        BbType::Regular => "".to_string(),
-        BbType::Cleanup => " (Cleanup)".to_string(),
-        BbType::Terminate => " (Terminate)".to_string(),
+fn fmt_bb_kind(bb: BasicBlock) -> String{
+    match bb.kind {
+        BbKind::Regular => "".to_string(),
+        BbKind::Cleanup => " (Cleanup)".to_string(),
+        BbKind::Terminate => " (Terminate)".to_string(),
     }
 }
 

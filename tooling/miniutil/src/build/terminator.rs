@@ -4,7 +4,7 @@ impl FunctionBuilder {
     #[track_caller]
     fn finish_block(&mut self, terminator: Terminator) {
         let cur_block = self.cur_block.take().expect("finish_block: there is no block to finish");
-        let bb = BasicBlock { statements: cur_block.statements, terminator, blocktype: cur_block.blocktype };
+        let bb = BasicBlock { statements: cur_block.statements, terminator, kind: cur_block.kind };
         self.blocks.try_insert(cur_block.name, bb).unwrap();
     }
 
@@ -49,7 +49,7 @@ impl FunctionBuilder {
     /// Call a function that does not unwind.
     pub fn call_nounwind(&mut self, ret: PlaceExpr, f: ValueExpr, args: &[ArgumentExpr]) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(Terminator::Call {
             callee: f,
             calling_convention: CallingConvention::C, // FIXME do not hard-code the C calling convention
@@ -64,7 +64,7 @@ impl FunctionBuilder {
     /// Call a function that does not unwind. Ignore unit type return value.
     pub fn call_ignoreret(&mut self, f: ValueExpr, args: &[ArgumentExpr]) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(Terminator::Call {
             callee: f,
             calling_convention: CallingConvention::C, // FIXME do not hard-code the C calling convention
@@ -78,7 +78,7 @@ impl FunctionBuilder {
 
     pub fn call(&mut self, ret: PlaceExpr, f: ValueExpr, args: &[ArgumentExpr], unwind_block: BbName) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(Terminator::Call {
             callee: f,
             calling_convention: CallingConvention::C, // FIXME do not hard-code the C calling convention
@@ -98,70 +98,70 @@ impl FunctionBuilder {
     // terminators with 1 following block
     pub fn assume(&mut self, val: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(assume(val, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn print(&mut self, arg: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(print(arg, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn eprint(&mut self, arg: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(eprint(arg, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn allocate(&mut self, size: ValueExpr, align: ValueExpr, ret_place: PlaceExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(allocate(size, align, ret_place, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn deallocate(&mut self, ptr: ValueExpr, size: ValueExpr, align: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(deallocate(ptr, size, align, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn spawn(&mut self, f: FnName, data_ptr: ValueExpr, ret: PlaceExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(spawn(fn_ptr(f), data_ptr, ret, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn join(&mut self, thread_id: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(join(thread_id, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn raw_eq(&mut self, dest: PlaceExpr, left_ptr: ValueExpr, right_ptr: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(raw_eq(dest, left_ptr, right_ptr, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn atomic_store(&mut self, ptr: ValueExpr, src: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(atomic_store(ptr, src, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn atomic_load(&mut self, dest: PlaceExpr, ptr: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(atomic_load(dest, ptr, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
@@ -174,7 +174,7 @@ impl FunctionBuilder {
         other: ValueExpr,
     ) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(atomic_fetch(binop, dest, ptr, other, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
@@ -187,7 +187,7 @@ impl FunctionBuilder {
         next_val: ValueExpr,
     ) {
         let next_block = self.declare_block();
-        let next_block_type: BbType = self.cur_block().blocktype;
+        let next_block_kind: BbKind = self.cur_block().kind;
         self.finish_block(compare_exchange(
             dest,
             ptr,
@@ -195,40 +195,40 @@ impl FunctionBuilder {
             next_val,
             bbname_into_u32(next_block),
         ));
-        self.set_cur_block(next_block, next_block_type);
+        self.set_cur_block(next_block, next_block_kind);
     }
 
     pub fn expose_provenance(&mut self, dest: PlaceExpr, ptr: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(expose_provenance(dest, ptr, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn with_exposed_provenance(&mut self, dest: PlaceExpr, addr: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(with_exposed_provenance(dest, addr, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn lock_create(&mut self, ret: PlaceExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(lock_create(ret, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn lock_acquire(&mut self, lock_id: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(lock_acquire(lock_id, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
 
     pub fn lock_release(&mut self, lock_id: ValueExpr) {
         let next_block = self.declare_block();
-        let next_block_type = self.cur_block().blocktype;
+        let next_block_type = self.cur_block().kind;
         self.finish_block(lock_release(lock_id, bbname_into_u32(next_block)));
         self.set_cur_block(next_block, next_block_type);
     }
@@ -256,7 +256,7 @@ impl FunctionBuilder {
         // branch map for switch terminator
         let mut branch_map: Map<Int, BbName> = Map::new();
 
-        let block_type = self.cur_block().blocktype;
+        let block_type = self.cur_block().kind;
 
         for (case, branch) in cases {
             let new_block = self.declare_block();
@@ -291,7 +291,7 @@ impl FunctionBuilder {
     pub fn while_<F: Fn(&mut Self)>(&mut self, condition: ValueExpr, body: F) {
         // goto new block such that condition sits alone in dedicated block
         let cond = self.declare_block();
-        let block_type = self.cur_block().blocktype;
+        let block_type = self.cur_block().kind;
         self.goto(cond);
         self.set_cur_block(cond, block_type);
 

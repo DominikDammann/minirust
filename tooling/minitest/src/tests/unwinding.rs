@@ -7,7 +7,7 @@ fn start_unwind_in_main() {
 
     let cleaun_up = f.cleanup(|f| {
         f.print(const_int(42));
-        f.exit();
+        f.exit(); 
     });
     f.start_unwind(cleaun_up);
     let f = p.finish_function(f);
@@ -17,7 +17,7 @@ fn start_unwind_in_main() {
 }
 
 #[test]
-fn unwind_recursive_func(){
+fn unwind_recursive_func() {
     let mut p = ProgramBuilder::new();
 
     let f =  {
@@ -26,7 +26,7 @@ fn unwind_recursive_func(){
         let var = f.declare_local::<i32>();
         let ret = f.declare_ret::<i32>();
     
-        let cleanup_resume = f.cleanup(|_|{});
+        let cleanup_resume = f.cleanup_resume();
         let cleanup_print = f.cleanup(|f|{
             f.print(load(arg));
             f.goto(cleanup_resume);
@@ -80,6 +80,7 @@ fn statements_in_cleanup() {
             f.assign(var, mul_unchecked(load(var), load(arg)));
             f.assign(var, shl_unchecked(load(var), const_int(2)));
             f.print(load(var));
+            f.resume_unwind();
         });
         f.storage_live(var);
         f.start_unwind(cleanup);
@@ -108,12 +109,12 @@ fn statements_in_cleanup() {
 
 
 #[test]
-fn print_after_unwind(){
+fn print_after_unwind() {
     let mut p = ProgramBuilder::new();
     
     let f = {
         let mut f = p.declare_function();
-        let cleanup = f.cleanup(|_|{});
+        let cleanup = f.cleanup_resume();
         f.start_unwind(cleanup);
         p.finish_function(f)
     };
@@ -148,7 +149,7 @@ fn resume_in_main() {
 }
 
 #[test]
-fn resume_no_unwind_block(){
+fn resume_no_unwind_block() {
     let mut p = ProgramBuilder::new();
     let f = {
         let mut f = p.declare_function();
