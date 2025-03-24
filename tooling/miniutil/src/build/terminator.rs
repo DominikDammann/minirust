@@ -13,7 +13,7 @@ impl FunctionBuilder {
         self.finish_block(exit());
     }
 
-    pub fn abort(&mut self){
+    pub fn abort(&mut self) {
         self.finish_block(abort());
     }
 
@@ -29,7 +29,7 @@ impl FunctionBuilder {
         self.finish_block(Terminator::Return);
     }
 
-    pub fn resume_unwind(&mut self){
+    pub fn resume_unwind(&mut self) {
         self.finish_block(Terminator::ResumeUnwind);
     }
 
@@ -80,7 +80,13 @@ impl FunctionBuilder {
         self.set_cur_block(next_block, next_block_kind);
     }
 
-    pub fn call(&mut self, ret: PlaceExpr, f: ValueExpr, args: &[ArgumentExpr], unwind_block: BbName) {
+    pub fn call(
+        &mut self,
+        ret: PlaceExpr,
+        f: ValueExpr,
+        args: &[ArgumentExpr],
+        unwind_block: BbName,
+    ) {
         let next_block = self.declare_block();
         let next_block_kind = self.cur_block().kind;
         self.finish_block(Terminator::Call {
@@ -95,7 +101,7 @@ impl FunctionBuilder {
     }
 
     // terminator with 0 following blocks and 1 clean up block
-    pub fn start_unwind(&mut self, clean_up: BbName){
+    pub fn start_unwind(&mut self, clean_up: BbName) {
         self.finish_block(start_unwind(clean_up));
     }
 
@@ -408,7 +414,7 @@ pub fn exit() -> Terminator {
     }
 }
 
-pub fn abort() -> Terminator{
+pub fn abort() -> Terminator {
     Terminator::Intrinsic {
         intrinsic: IntrinsicOp::Abort,
         arguments: list![],
@@ -430,7 +436,7 @@ pub fn return_() -> Terminator {
     Terminator::Return
 }
 
-pub fn start_unwind(clean_up: BbName) -> Terminator{
+pub fn start_unwind(clean_up: BbName) -> Terminator {
     Terminator::StartUnwind(clean_up)
 }
 

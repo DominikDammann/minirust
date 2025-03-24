@@ -55,7 +55,10 @@ fn switch_wrong_blockkind() {
     let f = function(Ret::No, 0, &[], &[bb0, bb1, bb2]);
     let p = program(&[f]);
     dump_program(p);
-    assert_ill_formed::<BasicMem>(p, "Terminator::Switch: next block in case 7 has the wrong block kind");
+    assert_ill_formed::<BasicMem>(
+        p,
+        "Terminator::Switch: next block in case 7 has the wrong block kind",
+    );
 }
 
 #[test]
@@ -91,7 +94,7 @@ fn call_nextblock_wrong_kind() {
     });
     let bb1 = block(&[], exit(), BbKind::Terminate);
     let f0 = function(Ret::No, 0, &[], &[bb0, bb1]);
-    
+
     let f1 = function(Ret::No, 0, &[], &[block!(return_())]);
     let p = program(&[f0, f1]);
     dump_program(p);
@@ -110,7 +113,7 @@ fn call_unwindblock_wrong_kind() {
     });
     let bb1 = block!(exit());
     let f0 = function(Ret::No, 0, &[], &[bb0, bb1]);
-    
+
     let f1 = function(Ret::No, 0, &[], &[block!(return_())]);
     let p = program(&[f0, f1]);
     dump_program(p);
@@ -128,12 +131,13 @@ fn call_unwindblock_wrong_kind_2() {
             arguments: list![],
             ret: unit_place(),
             next_block: None,
-            unwind_block: Some(BbName(Name::from_internal(2)))
+            unwind_block: Some(BbName(Name::from_internal(2))),
         },
-        BbKind::Cleanup);
+        BbKind::Cleanup,
+    );
     let bb2 = block(&[], exit(), BbKind::Cleanup);
     let f0 = function(Ret::No, 0, &[], &[bb0, bb1, bb2]);
-    
+
     let f1 = function(Ret::No, 0, &[], &[block!(return_())]);
     let p = program(&[f0, f1]);
     dump_program(p);
@@ -145,14 +149,14 @@ fn return_in_cleanup() {
     let mut p = ProgramBuilder::new();
     let f = {
         let mut f = p.declare_function();
-        let c = f.cleanup(|f|{f.return_()});
+        let c = f.cleanup(|f| f.return_());
         f.start_unwind(c);
         p.finish_function(f)
     };
 
     let main_fn = {
         let mut main_fn = p.declare_function();
-        let c = main_fn.cleanup(|f|{
+        let c = main_fn.cleanup(|f| {
             f.abort();
         });
         main_fn.call(unit_place(), fn_ptr(f), &[], c);
@@ -171,7 +175,7 @@ fn start_unwind_in_cleanup() {
     let f = {
         let mut f = p.declare_function();
         let outer_cleanup = f.cleanup(|f| {
-            let inner_cleanup = f.cleanup(|f|{f.exit()});
+            let inner_cleanup = f.cleanup(|f| f.exit());
             f.start_unwind(inner_cleanup);
         });
         f.start_unwind(outer_cleanup);
@@ -189,7 +193,10 @@ fn start_unwind_wrong_nextblock() {
     let f = function(Ret::No, 0, &[], &[bb0, bb1]);
     let p = program(&[f]);
     dump_program(p);
-    assert_ill_formed::<BasicMem>(p, "Terminator::StartUnwind: next block has the wrong block kind");
+    assert_ill_formed::<BasicMem>(
+        p,
+        "Terminator::StartUnwind: next block has the wrong block kind",
+    );
 }
 
 #[test]
