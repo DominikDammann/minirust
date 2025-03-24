@@ -286,13 +286,6 @@ impl FunctionBuilder {
             f.resume_unwind();
         })
     }
-
-    pub fn cleanup_exit(&mut self) -> BbName
-    {
-        self.cleanup(|f|{
-            f.exit();
-        })
-    }
     
     pub fn terminate<F>(& mut self, terminat_builer: F) -> BbName
     where 

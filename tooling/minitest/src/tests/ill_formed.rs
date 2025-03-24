@@ -48,7 +48,7 @@ fn goto_wrong_blockkind() {
 }
 
 #[test]
-fn switch_wrong_blocktype() {
+fn switch_wrong_blockkind() {
     let bb0 = block!(switch_int(const_int(0), &[(0u8, 1), (1u8, 1), (7u8, 2)], 1));
     let bb1 = block!(exit());
     let bb2 = block(&[], exit(), BbKind::Cleanup);
@@ -59,7 +59,7 @@ fn switch_wrong_blocktype() {
 }
 
 #[test]
-fn switch_wrong_blocktype_fallback() {
+fn switch_wrong_blockkind_fallback() {
     let bb0 = block!(switch_int(const_int(0), &[(0u8, 1), (1u8, 1), (7u8, 1)], 2));
     let bb1 = block!(exit());
     let bb2 = block(&[], exit(), BbKind::Cleanup);
@@ -70,7 +70,7 @@ fn switch_wrong_blocktype_fallback() {
 }
 
 #[test]
-fn intrinsic_wrong_blocktype() {
+fn intrinsic_wrong_blockkind() {
     let bb0 = block!(print(const_int(0), 1));
     let bb1 = block(&[], exit(), BbKind::Cleanup);
     let f = function(Ret::No, 0, &[], &[bb0, bb1]);
@@ -80,7 +80,7 @@ fn intrinsic_wrong_blocktype() {
 }
 
 #[test]
-fn call_nextblock_wrong_type() {
+fn call_nextblock_wrong_kind() {
     let bb0 = block!(Terminator::Call {
         callee: fn_ptr_internal(1),
         calling_convention: CallingConvention::C,
@@ -99,7 +99,7 @@ fn call_nextblock_wrong_type() {
 }
 
 #[test]
-fn call_unwindblock_wrong_type() {
+fn call_unwindblock_wrong_kind() {
     let bb0 = block!(Terminator::Call {
         callee: fn_ptr_internal(1),
         calling_convention: CallingConvention::C,
@@ -118,7 +118,7 @@ fn call_unwindblock_wrong_type() {
 }
 
 #[test]
-fn call_unwindblock_wrong_type_2() {
+fn call_unwindblock_wrong_kind_2() {
     let bb0 = block!(start_unwind(BbName(Name::from_internal(1))));
     let bb1 = block(
         &[],
@@ -152,7 +152,9 @@ fn return_in_cleanup() {
 
     let main_fn = {
         let mut main_fn = p.declare_function();
-        let c = main_fn.cleanup_exit();
+        let c = main_fn.cleanup(|f|{
+            f.abort();
+        });
         main_fn.call(unit_place(), fn_ptr(f), &[], c);
         main_fn.exit();
         p.finish_function(main_fn)

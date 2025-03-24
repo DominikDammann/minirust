@@ -1,15 +1,31 @@
 use crate::*;
 
 #[test]
+fn abort_in_cleanup(){
+    let mut p = ProgramBuilder::new();
+    let mut f = p.declare_function();
+    
+    let cleanup = f.cleanup(|f|{
+        f.abort();
+    });
+
+    f.start_unwind(cleanup);
+    let f = p.finish_function(f);
+    let p = p.finish_program(f);
+    dump_program(p);
+    assert_abort::<BasicMem>(p, "aborted");
+}
+
+#[test]
 fn start_unwind_in_main() {
     let mut p = ProgramBuilder::new();
     let mut f = p.declare_function();
 
-    let cleaun_up = f.cleanup(|f| {
+    let cleanup = f.cleanup(|f| {
         f.print(const_int(42));
-        f.exit(); 
+        f.exit(); //Call exit() instead of abort, because there is currently no way to access the standard output if the program has aborted.
     });
-    f.start_unwind(cleaun_up);
+    f.start_unwind(cleanup);
     let f = p.finish_function(f);
     let p = p.finish_program(f);
     dump_program(p);
@@ -173,8 +189,10 @@ fn resume_no_unwind_block() {
     let main_fn = {
         let mut main_fn = p.declare_function();
 
-        let clean_up = main_fn.cleanup_exit();
-        main_fn.call(unit_place(), fn_ptr(f), &[by_value(const_int(3))], clean_up);
+        let cleanup = main_fn.cleanup(|f|{
+            f.abort();
+        });
+        main_fn.call(unit_place(), fn_ptr(f), &[by_value(const_int(3))], cleanup);
         main_fn.exit();
 
         p.finish_function(main_fn)

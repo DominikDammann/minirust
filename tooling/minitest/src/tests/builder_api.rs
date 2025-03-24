@@ -193,7 +193,7 @@ fn reach_terminate_block() {
             f.unreachable();
         });
 
-        f.call(unit_place(), fn_ptr(panic_fn), &[], cleanup );
+        f.call(unit_place(), fn_ptr(panic_fn), &[], cleanup);
         f.unreachable(); 
         p.finish_function(f)
     };
