@@ -219,6 +219,7 @@ fn fmt_terminator(t: Terminator, comptypes: &mut Vec<CompType>) -> String {
         }
         Terminator::Intrinsic { intrinsic, arguments, ret, next_block } => {
             let callee = match intrinsic {
+                IntrinsicOp::Abort => "abort",
                 IntrinsicOp::Assume => "assume",
                 IntrinsicOp::Exit => "exit",
                 IntrinsicOp::Panic => "panic",
