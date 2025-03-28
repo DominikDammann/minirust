@@ -5,6 +5,7 @@ mod atomic_fetch;
 mod bool;
 mod builder_api;
 mod call;
+mod catch_unwind;
 mod compare_exchange;
 mod compute_align;
 mod compute_size;

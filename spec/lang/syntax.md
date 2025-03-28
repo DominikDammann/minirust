@@ -370,6 +370,15 @@ pub enum Terminator {
     StartUnwind(BbName),
     /// Ends this function call. The unwinding should continue at the caller's stack frame.
     ResumeUnwind,
+    /// Calls `try_fn`. If try_fn does not unwind, the return value of `try_fn` will be written to the `data_ptr`, and the `catch_unwind` will return 0.
+    /// If `try_fn` unwinds, the `catch_fn` will be called, and `catch_unwind` will return 1.
+    CatchUnwind {
+        try_fn: ValueExpr,
+        catch_fn: ValueExpr,
+        ret: PlaceExpr,
+        data_ptr: PlaceExpr,
+        next_block: Option<BbName>,
+    },
 }
 
 /// Function arguments can be passed by-value or in-place.

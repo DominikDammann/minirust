@@ -184,6 +184,7 @@ impl<M: Memory> Machine<M> {
         caller_conv: CallingConvention,
         caller_ret_ty: Type,
         caller_args: List<(Value<M>, Type)>,
+        catch_action: Option<CatchAction>,
     ) -> NdResult<StackFrame<M>> {
         let mut frame = StackFrame {
             func,
@@ -192,6 +193,7 @@ impl<M: Memory> Machine<M> {
             unwind_block,
             next_block: func.start,
             next_stmt: Int::ZERO,
+            catch_action,
             extra: M::new_call(),
         };
 
@@ -263,6 +265,7 @@ impl<M: Memory> Machine<M> {
             caller_conv,
             caller_ret_ty,
             arguments,
+            None,
         )?;
 
         // Push new stack frame, so it is executed next.
@@ -381,18 +384,94 @@ impl<M: Memory> Machine<M> {
         // Inform the memory model that this call has ended.
         self.mem.end_call(frame.extra)?;
 
-        // Terminate current thread, if the bottom of the stack is reached.
-        if self.active_thread().stack.len() == 0{
-                self.terminate_active_thread("resume")?;
+        // If the current function is a try function, load the `catch_fn` onto the stack.
+        if let Some(catch_action) = frame.catch_action {
+            // Write 1 into the return value of `catch_unwind`.
+            let one_val = Value::Int(1.into());
+            let (return_place, return_ty) = self.eval_place(catch_action.ret_expr)?;
+            self.place_store(return_place, one_val, return_ty)?;
+
+            // Then evaluate the function that will be called.
+            let (Value::Ptr(Pointer { thin_pointer: ptr, .. }), Type::Ptr(PtrType::FnPtr)) = self.eval_value(catch_action.catch_fn)? else {
+                    panic!("call on a non-pointer")
+            };
+            let func = self.fn_from_ptr(ptr)?;
+
+            let return_action = frame.return_action;
+    
+            let catch_frame = self.create_frame(
+                func,
+                return_action,
+                None,
+                CallingConvention::C,
+                unit_type(),
+                List::new(),
+                None,
+        )?;
+            self.mutate_cur_stack(|stack| stack.push(catch_frame));
         }
-        // Jump to the unwind_block of the caller. 
         else{
-            if let Some(unwind_block) = frame.unwind_block {
+            // Terminate current thread, if the bottom of the stack is reached.
+            if self.active_thread().stack.len() == 0{
+                self.terminate_active_thread("resume")?;
+            }
+            // Jump to the unwind_block of the caller. 
+            else{
+                if let Some(unwind_block) = frame.unwind_block {
                     self.jump_to_block(unwind_block)?;
                 } else {
                     throw_ub!("unwinding from a function where caller did not specify unwind_block");
                 }
+            }
         }
+        ret(())
+    }
+}
+```
+
+## Catch Unwind
+```rust
+impl<M: Memory> Machine<M> {
+    fn eval_terminator(
+        &mut self,
+        Terminator::CatchUnwind { try_fn, catch_fn, ret: ret_expr, data_ptr, next_block }: Terminator
+    ) -> NdResult {
+        // Write 0 in the return place. This will be overwritten with a 1 if `try_fn` unwinds.
+        let zero_val = Value::Int(0.into());
+        let (return_place, return_ty) = self.eval_place(ret_expr)?;
+        self.place_store(return_place, zero_val, return_ty)?;
+
+        // Prepare the call to `try_fn`.
+        // The return value of `try-fn` should be written into the `data_ptr`.
+        let (data_ptr_place, data_ptr_ty) = self.eval_place(data_ptr)?;
+        // Make sure we can use it in-place.
+        self.prepare_for_inplace_passing(data_ptr_place, data_ptr_ty)?;
+
+        // Then evaluate the function that will be called (i.e. the `try_fn`).
+        let (Value::Ptr(Pointer { thin_pointer: ptr, .. }), Type::Ptr(PtrType::FnPtr)) = self.eval_value(try_fn)? else {
+            panic!("call on a non-pointer")
+        };
+        let func = self.fn_from_ptr(ptr)?;
+
+        // Set up stackframe for `try_fn`.
+        let return_action = ReturnAction::ReturnToCaller {
+            next_block,
+            ret_val_ptr: data_ptr_place.ptr.thin_pointer,
+        };
+        let catch_action = CatchAction{
+            catch_fn: catch_fn,
+            ret_expr: ret_expr,
+        };
+        let frame = self.create_frame(
+            func,
+            return_action,
+            None,
+            CallingConvention::C,
+            data_ptr_ty,
+            List::new(),
+            Some(catch_action),
+        )?;
+        self.mutate_cur_stack(|stack| stack.push(frame));
         ret(())
     }
 }

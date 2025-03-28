@@ -74,6 +74,10 @@ struct StackFrame<M: Memory> {
     /// out-of-bounds index in the statement list), it refers to the terminator.
     next_stmt: Int,
 
+    /// If this function is a try function, `catch_action` will be `Some` and will contain the necessary data to invoke the catch function.
+    /// Otherwise, `catch_action` will be `None`.
+    catch_action: Option<CatchAction>,
+
     /// The memory model is given the ability to track some extra per-frame data.
     extra: M::FrameExtra,
 }
@@ -90,6 +94,11 @@ enum ReturnAction<M: Memory> {
         /// The caller type already been checked to be suitably compatible with the callee return type.
         ret_val_ptr: ThinPointer<M::Provenance>,
     }
+}
+
+struct CatchAction{
+    catch_fn: ValueExpr,
+    ret_expr: PlaceExpr,
 }
 ```
 
@@ -310,6 +319,7 @@ impl<M: Memory> Machine<M> {
             CallingConvention::C,
             unit_type(),
             args,
+            None,
         )?;
         // Push the new thread, return the index.
         let thread = Thread {

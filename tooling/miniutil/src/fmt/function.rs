@@ -226,6 +226,13 @@ fn fmt_terminator(t: Terminator, comptypes: &mut Vec<CompType>) -> String {
         Terminator::ResumeUnwind => {
             format!("    resume")
         }
+        Terminator::CatchUnwind { try_fn, catch_fn, ret, data_ptr, next_block } => {
+            let try_func_name = fmt_value_expr(try_fn, comptypes).to_atomic_string();
+            let catch_func_name = fmt_value_expr(catch_fn, comptypes).to_atomic_string();
+            let data_name = fmt_place_expr(data_ptr, comptypes).to_atomic_string();
+            let args = format!("{try_func_name},{data_name},{catch_func_name}");
+            fmt_call("CatchUnwind", CallingConvention::Rust, args, ret, next_block, None, comptypes)
+        }
         Terminator::Intrinsic { intrinsic, arguments, ret, next_block } => {
             let callee = match intrinsic {
                 IntrinsicOp::Abort => "abort",

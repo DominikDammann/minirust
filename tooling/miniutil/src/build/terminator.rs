@@ -243,6 +243,24 @@ impl FunctionBuilder {
         self.set_cur_block(next_block, next_block_kind);
     }
 
+    pub fn catch_unwind(
+        &mut self,
+        try_fn: ValueExpr,
+        data_ptr: PlaceExpr,
+        catch_fn: ValueExpr,
+        ret: PlaceExpr,
+    ) {
+        let next_block = self.declare_block();
+        self.finish_block(catch_unwind(
+            try_fn,
+            data_ptr,
+            catch_fn,
+            ret,
+            bbname_into_u32(next_block),
+        ));
+        self.set_cur_block(next_block, BbKind::Regular);
+    }
+
     // terminators with 2 or more following blocks
     pub fn if_<F, G>(&mut self, condition: ValueExpr, then_branch: F, else_branch: G)
     where
@@ -442,6 +460,22 @@ pub fn start_unwind(clean_up: BbName) -> Terminator {
 
 pub fn resume_unwind() -> Terminator {
     Terminator::ResumeUnwind
+}
+
+pub fn catch_unwind(
+    try_fn: ValueExpr,
+    data_ptr: PlaceExpr,
+    catch_fn: ValueExpr,
+    ret: PlaceExpr,
+    next: u32,
+) -> Terminator {
+    Terminator::CatchUnwind {
+        try_fn: try_fn,
+        catch_fn: catch_fn,
+        ret,
+        data_ptr,
+        next_block: Some(BbName(Name::from_internal(next))),
+    }
 }
 
 pub fn spawn(fn_ptr: ValueExpr, data_ptr: ValueExpr, ret: PlaceExpr, next: u32) -> Terminator {

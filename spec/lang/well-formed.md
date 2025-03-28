@@ -765,6 +765,9 @@ impl Terminator {
             ResumeUnwind => {
                  ensure_wf(block.kind == BbKind::Cleanup, "Terminator::ResumeUnwind: has to be called in cleanup block")?;
             }
+            CatchUnwind{..} => {
+                //TODO Well-formed checks for CatchUnwind
+            }
         }
 
         ret(())
