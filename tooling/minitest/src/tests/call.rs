@@ -131,4 +131,3 @@ fn ret_mismatch() {
     dump_program(p);
     assert_ub::<BasicMem>(p, "call ABI violation: return types are not compatible");
 }
-
