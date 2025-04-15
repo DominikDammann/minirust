@@ -446,7 +446,7 @@ impl<M: Memory> Machine<M> {
                     if let Some(unwind_block) = unwind_block {
                         self.jump_to_block(unwind_block)?;
                     } else {
-                        throw_ub!("unwinding from a function where caller did not specify an unwind_block");
+                        throw_ub!("unwinding from a function where the caller did not specify an unwind_block");
                     }
                 }
             }
