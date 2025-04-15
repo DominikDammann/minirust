@@ -431,7 +431,7 @@ fn wrong_return_type() {
 }
 
 #[test]
-fn unwind_in_catch(){
+fn unwind_in_catch() {
     let mut p = ProgramBuilder::new();
 
     let try_fn = {
@@ -445,7 +445,7 @@ fn unwind_in_catch(){
     let catch_fn = {
         let mut f = p.declare_function();
         let _ = f.declare_arg::<*mut u8>();
-        let cleanup = f.cleanup_block(|f|f.resume_unwind());
+        let cleanup = f.cleanup_block(|f| f.resume_unwind());
         f.start_unwind(cleanup);
         p.finish_function(f)
     };
@@ -464,6 +464,8 @@ fn unwind_in_catch(){
 
     let p = p.finish_program(main_fn);
     dump_program(p);
-    assert_ub::<BasicMem>(p, "unwinding from a function where the caller did not specify an unwind_block");
-
+    assert_ub::<BasicMem>(
+        p,
+        "unwinding from a function where the caller did not specify an unwind_block",
+    );
 }

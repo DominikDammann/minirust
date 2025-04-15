@@ -98,7 +98,7 @@ fn start_unwind_wrong_nextblock() {
 
 /// This test checks that a `catch_unwind` with a `next_block` of the wrong kind results in an ill-formed program.
 #[test]
-fn catch_unwind_nextblock_wrong_kind(){
+fn catch_unwind_nextblock_wrong_kind() {
     let locals = [<i32>::get_type(), <i32>::get_type(), <*mut u8>::get_type()];
 
     let b0 = block!(
