@@ -123,10 +123,10 @@ impl FunctionBuilder {
         self.finish_block(Terminator::Goto(dest));
     }
 
-    pub fn goto_regular_block(&mut self) {
+    pub fn change_block_kind(&mut self, kind: BbKind) {
         let next_block = self.declare_block();
         self.finish_block(Terminator::Goto(next_block));
-        self.set_cur_block(next_block, BbKind::Regular);
+        self.set_cur_block(next_block, kind);
     }
 
     pub fn assume(&mut self, val: ValueExpr) {

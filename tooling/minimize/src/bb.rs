@@ -279,6 +279,26 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
         TerminatorResult { terminator, stmts: List::new() }
     }
 
+    /// Translate Rust's `catch_unwind` intrinsic to MiniRust.
+    ///
+    /// This translates `ret = catch_unwind(try_fn, data_ptr, catch_fn)` into the following blocks:
+    /// ```
+    /// // try block
+    /// bb0:
+    ///     try_fn(data_ptr) -> [return: bb1, unwind: bb2]
+    /// // return block
+    /// bb1:
+    ///     ret = 0;
+    ///     goTo -> bb3
+    /// // catch block
+    /// bb2 (Catch):
+    ///     ret = 1;
+    ///     catch_fn(data_ptr, null) -> return: bb3
+    /// // the block after `catch_unwind`
+    /// bb3:
+    ///     // ...
+    /// ```
+    /// This function returns a `goTo` terminator pointing to the try block.
     fn translate_catch_unwind(
         &mut self,
         args: List<ValueExpr>,
@@ -289,29 +309,27 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
         let data = args.index_at(1);
         let catch_fn = args.index_at(2);
 
-        // generate catch block
-
-        // FIXME temporary value as panic payload is not yet implemented.
-        let payload = build::null();
-        let catch_bb_name = self.fresh_bb_name();
-        let catch_bb = BasicBlock 
-            {   statements: list! [Statement::Assign { destination, source: build::const_int(1) }],
-                terminator: Terminator::Call { 
-                    callee: catch_fn,
-                    calling_convention: CallingConvention::Rust,
-                    arguments: list![build::by_value(data), build::by_value(payload)],
-                    ret: unit_place(),
-                    next_block: Some(target),
-                    unwind_block: None,
-                },
-                kind: BbKind::Catch,
-            };
-           
-           
-        self.blocks.insert(catch_bb_name, catch_bb);
-
-        // generate return block
+        // the names of the new blocks
+        let try_bb_name = self.fresh_bb_name();
         let return_bb_name = self.fresh_bb_name();
+        let catch_bb_name = self.fresh_bb_name();
+
+        // generate the try block
+        let try_bb = BasicBlock {
+            statements: list![],
+            terminator: Terminator::Call {
+                callee: try_fn,
+                calling_convention: CallingConvention::Rust,
+                arguments: list![build::by_value(data)],
+                ret: unit_place(),
+                next_block: Some(return_bb_name),
+                unwind_block: Some(catch_bb_name),
+            },
+            kind: BbKind::Regular,
+        };
+        self.blocks.insert(try_bb_name, try_bb);
+
+        // generate the return block
         let return_bb = BasicBlock {
             statements: list![Statement::Assign { destination, source: build::const_int(0) }],
             terminator: Terminator::Goto(target),
@@ -319,24 +337,26 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
         };
         self.blocks.insert(return_bb_name, return_bb);
 
-        //generate try block
-        let try_bb_name = self.fresh_bb_name();
-        let try_bb = BasicBlock {
-            statements: list![],
-            terminator: Terminator::Call { 
-                callee: try_fn,
+        // generate the catch block
+        // FIXME: Using temporary value as panic payload is not yet implemented in MiniRust.
+        let payload = build::null();
+        let catch_bb = BasicBlock {
+            statements: list![Statement::Assign { destination, source: build::const_int(1) }],
+            terminator: Terminator::Call {
+                callee: catch_fn,
                 calling_convention: CallingConvention::Rust,
-                arguments: list![build::by_value(data)],
+                arguments: list![build::by_value(data), build::by_value(payload)],
                 ret: unit_place(),
-                next_block: Some(return_bb_name),
-                unwind_block: Some(catch_bb_name)
+                next_block: Some(target),
+                unwind_block: None,
             },
-            kind: BbKind::Regular,
+            kind: BbKind::Catch,
         };
-        self.blocks.insert(try_bb_name, try_bb);
 
+        self.blocks.insert(catch_bb_name, catch_bb);
         Terminator::Goto(try_bb_name)
     }
+
     fn translate_rs_intrinsic(
         &mut self,
         intrinsic: rs::Instance<'tcx>,
@@ -492,10 +512,8 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
                 return TerminatorResult { stmts: list![], terminator };
             }
             rs::sym::catch_unwind => {
-                let arguments = args
-                    .iter()
-                    .map(|x| self.translate_operand(&x.node, x.span))
-                    .collect();
+                let arguments =
+                    args.iter().map(|x| self.translate_operand(&x.node, x.span)).collect();
                 let ret_place = self.translate_place(destination, span);
                 let terminator = self.translate_catch_unwind(
                     arguments,
@@ -509,6 +527,7 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
     }
 
     /// Translates an `UnwindAction` to MiniRust.
+    ///
     /// May insert a new block into `self`, as MiniRust does not support `UnwindAction` directly.
     /// Returns the name of the first cleanup block to execute in case of unwinding.
     fn translate_unwind_action(
