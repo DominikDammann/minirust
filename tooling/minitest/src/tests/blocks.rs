@@ -295,15 +295,45 @@ fn unwind_in_catch_block() {
 
 /// In this test there is a `goTo`, that jumps from a cleanup to a catch block, which results in an ill-formed program.
 #[test]
-fn goto_cleanup_to_catch() {
-    let locals = [<()>::get_type()];
+fn change_block_kind() {
+    let mut p = ProgramBuilder::new();
+    let main_fn = {
+        let mut f = p.declare_function();
+        let cleanup = f.cleanup_block(|f| {
+            f.change_block_kind(BbKind::Catch);
+            f.exit();
+        });
+        f.start_unwind(cleanup);
+        p.finish_function(f)
+    };
 
-    let b0 = block!(storage_live(0), Terminator::StartUnwind(BbName(Name::from_internal(1))));
-    let b1 = block(&[], Terminator::Goto(BbName(Name::from_internal(2))), BbKind::Cleanup);
-    let b2 = block(&[], exit(), BbKind::Catch);
-
-    let f = function(Ret::No, 0, &locals, &[b0, b1, b2]);
-    let p = program(&[f, other_f()]);
+    let p = p.finish_program(main_fn);
     dump_program(p);
     assert_ill_formed::<BasicMem>(p, "Terminator: next block has the wrong block kind");
+}
+
+// test if the next block_kind has the correct type
+fn next_block_from_regular(kind: BbKind) -> Program {
+    let mut p = ProgramBuilder::new();
+    let mut f = p.declare_function();
+    f.change_block_kind(kind);
+    f.exit();
+    let f = p.finish_function(f);
+    p.finish_program(f)
+}
+
+#[test]
+fn check_next_block_kind() {
+    assert_ill_formed::<BasicMem>(
+        next_block_from_regular(BbKind::Catch),
+        "Terminator: next block has the wrong block kind",
+    );
+    assert_ill_formed::<BasicMem>(
+        next_block_from_regular(BbKind::Cleanup),
+        "Terminator: next block has the wrong block kind",
+    );
+    assert_ill_formed::<BasicMem>(
+        next_block_from_regular(BbKind::Terminate),
+        "Terminator: next block has the wrong block kind",
+    );
 }
