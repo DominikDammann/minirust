@@ -297,9 +297,9 @@ impl<'cx, 'tcx> FnCtxt<'cx, 'tcx> {
     /// // catch block
     /// bb2 (Catch):
     ///     *ret_tmp = 1;
-    ///     catch_fn_tmp(data_ptr, null) -> return: bb3
+    ///     catch_fn_tmp(data_tmp, null) -> return: bb3
     /// // stop_unwind block
-    /// bb3:
+    /// bb3 (Catch):
     ///     StopUnwind -> bb4
     /// // target (next block of the program)
     /// bb4:
